@@ -3,35 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的宇宙星空 - 行星版(修复)</title>
+    <title>我的宇宙星空</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: #000011; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
         #ui-overlay {
             position: fixed; top: 20px; left: 20px; z-index: 100; color: white;
-            background: rgba(0, 0, 20, 0.7); padding: 15px 20px; border-radius: 10px;
+            background: rgba(0, 0, 20, 0.75); padding: 15px 20px; border-radius: 10px;
             border: 1px solid rgba(100, 150, 255, 0.3); backdrop-filter: blur(10px); max-width: 340px;
-            transition: opacity 0.3s;
         }
         #ui-overlay h2 { font-size: 16px; margin-bottom: 10px; color: #aaccff; }
         #ui-overlay p { font-size: 13px; line-height: 1.6; color: #ccddee; margin: 5px 0; }
         #location-status { color: #ffcc66; font-weight: bold; }
-        #loading {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 18px; z-index: 200; text-align: center;
-        }
-        #loading button {
-            margin-top: 20px; padding: 10px 30px; background: rgba(100, 150, 255, 0.3);
-            border: 1px solid rgba(100, 150, 255, 0.5); color: white; border-radius: 5px;
-            cursor: pointer; font-size: 14px;
-        }
-        #loading button:hover { background: rgba(100, 150, 255, 0.5); }
+        /* 加载界面样式在下面重新定义 */
         .tooltip {
-            position: absolute; background: rgba(0, 0, 30, 0.9); color: white;
-            padding: 8px 12px; border-radius: 6px; font-size: 12px; pointer-events: none;
+            position: absolute; background: rgba(0, 0, 30, 0.95); color: white;
+            padding: 10px 14px; border-radius: 8px; font-size: 12px; pointer-events: none;
             border: 1px solid rgba(100, 150, 255, 0.4); display: none; z-index: 200;
+            max-width: 280px; line-height: 1.6;
         }
+        .tooltip .obj-name { font-size: 15px; font-weight: bold; color: #aaccff; margin-bottom: 6px; }
+        .tooltip .obj-type { color: #ffcc66; font-size: 11px; }
+        .tooltip .obj-info { color: #ccddee; margin-top: 4px; }
         #compass {
             position: fixed; bottom: 30px; right: 30px; width: 80px; height: 80px;
             border: 2px solid rgba(100, 150, 255, 0.4); border-radius: 50%;
@@ -39,13 +33,10 @@
             color: rgba(200, 220, 255, 0.8); font-size: 12px; z-index: 100;
             background: rgba(0, 0, 20, 0.5);
         }
-        #compass::before {
-            content: 'N'; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
-            color: #ff6666; font-weight: bold;
-        }
+        #compass::before { content: 'N'; position: absolute; top: 5px; left: 50%; transform: translateX(-50%); color: #ff6666; font-weight: bold; }
         #time-control {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: rgba(0, 0, 20, 0.7); padding: 10px 20px;
+            z-index: 100; background: rgba(0, 0, 20, 0.75); padding: 10px 20px;
             border-radius: 10px; border: 1px solid rgba(100, 150, 255, 0.3);
             display: flex; align-items: center; gap: 15px;
         }
@@ -62,7 +53,7 @@
             display: flex; gap: 5px;
         }
         #search-box input {
-            padding: 8px 15px; background: rgba(0, 0, 20, 0.7);
+            padding: 8px 15px; background: rgba(0, 0, 20, 0.75);
             border: 1px solid rgba(100, 150, 255, 0.3); color: white;
             border-radius: 5px; font-size: 13px; width: 150px;
         }
@@ -75,13 +66,13 @@
         #search-box button:hover { background: rgba(100, 150, 255, 0.5); }
         #object-list {
             position: fixed; top: 70px; right: 20px; z-index: 100;
-            background: rgba(0, 0, 20, 0.7); padding: 10px 15px;
+            background: rgba(0, 0, 20, 0.75); padding: 10px 15px;
             border-radius: 10px; border: 1px solid rgba(100, 150, 255, 0.3);
-            max-height: 300px; overflow-y: auto; display: none;
+            max-height: 400px; overflow-y: auto; display: none; min-width: 260px;
         }
         #object-list h3 { color: #aaccff; font-size: 13px; margin-bottom: 8px; }
         #object-list .obj-item {
-            color: #ccddee; font-size: 12px; padding: 3px 0;
+            color: #ccddee; font-size: 12px; padding: 4px 0;
             cursor: pointer; border-bottom: 1px solid rgba(100,150,255,0.1);
         }
         #object-list .obj-item:hover { color: #fff; }
@@ -92,14 +83,111 @@
             border-radius: 5px; cursor: pointer; font-size: 13px;
         }
         #toggle-list:hover { background: rgba(100, 150, 255, 0.5); }
+        /* 城市快速选择面板 */
+        #city-panel {
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            z-index: 100; background: rgba(0, 0, 20, 0.85); padding: 15px 20px;
+            border-radius: 12px; border: 1px solid rgba(100, 150, 255, 0.3);
+            display: none; max-width: 420px; width: 90vw;
+        }
+        #city-panel h3 { color: #aaccff; font-size: 14px; margin: 0 0 10px 0; text-align: center; }
+        #city-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+        }
+        .city-btn {
+            padding: 6px 4px; background: rgba(100,150,255,0.15);
+            border: 1px solid rgba(100,150,255,0.3); color: #ccddee;
+            border-radius: 6px; cursor: pointer; font-size: 12px;
+            transition: all 0.2s; text-align: center;
+        }
+        .city-btn:hover { background: rgba(100,150,255,0.4); color: white; transform: scale(1.05); }
+        .city-btn .city-flag { font-size: 14px; }
+        .city-btn .city-name { display: block; font-size: 11px; margin-top: 2px; }
+        #city-panel .manual-toggle {
+            display: block; width: 100%; margin-top: 10px; padding: 6px;
+            background: none; border: 1px dashed rgba(100,150,255,0.3);
+            color: #6688aa; border-radius: 6px; cursor: pointer; font-size: 11px;
+        }
+        #city-panel .manual-toggle:hover { color: #aaccff; border-color: rgba(100,150,255,0.5); }
+        #city-panel .manual-section {
+            display: none; margin-top: 10px; padding-top: 10px;
+            border-top: 1px solid rgba(100,150,255,0.2);
+            gap: 8px; align-items: center; justify-content: center;
+        }
+        #city-panel .manual-section.show { display: flex; }
+        #city-panel .manual-section input {
+            padding: 6px 8px; background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(100,150,255,0.3); color: white;
+            border-radius: 4px; font-size: 12px; width: 90px;
+        }
+        #city-panel .manual-section input::placeholder { color: #556677; }
+        #city-panel .manual-section button {
+            padding: 6px 14px; background: rgba(100,150,255,0.3);
+            border: 1px solid rgba(100,150,255,0.5); color: white;
+            border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        #city-panel .manual-section button:hover { background: rgba(100,150,255,0.5); }
+        #screenshot-btn {
+            position: fixed; bottom: 30px; left: 20px; z-index: 100;
+            padding: 8px 15px; background: rgba(100, 150, 255, 0.3);
+            border: 1px solid rgba(100, 150, 255, 0.5); color: white;
+            border-radius: 5px; cursor: pointer; font-size: 12px;
+        }
+        #screenshot-btn:hover { background: rgba(100, 150, 255, 0.5); }
+        #day-night-indicator {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 100; padding: 6px 16px; border-radius: 20px;
+            font-size: 12px; color: white; pointer-events: none;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+        }
+        /* 加载界面 */
+        #loading {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
+            background: linear-gradient(180deg, #000011 0%, #0a0a2a 100%) !important;
+            z-index: 1000 !important; display: flex !important; flex-direction: column !important;
+            align-items: center !important; justify-content: center !important;
+            color: white !important; text-align: center !important;
+            transition: opacity 0.8s ease;
+            transform: none !important;
+        }
+        #loading.fade-out { opacity: 0; pointer-events: none; }
+        #loading .loading-icon { font-size: 48px; margin-bottom: 20px; animation: pulse 2s infinite; }
+        #loading .loading-text { font-size: 18px; color: #aaccff; margin-bottom: 10px; }
+        #loading .loading-sub { font-size: 13px; color: #6688aa; margin-bottom: 20px; }
+        #loading .countdown {
+            font-size: 48px; font-weight: bold; color: #66ff99;
+            margin: 15px 0; line-height: 1.2; min-width: 80px;
+        }
+        #loading .countdown-label { font-size: 13px; color: #8899aa; margin-bottom: 5px; }
+        #loading .progress-bar {
+            width: 200px; height: 3px; background: rgba(100,150,255,0.2);
+            border-radius: 3px; overflow: hidden; margin-top: 15px;
+        }
+        #loading .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #4488ff, #66ff99);
+            border-radius: 3px; transition: width 1s linear;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
     </style>
 </head>
 <body>
-    <div id="loading"><div>正在初始化星空...</div><button id="start-btn" style="display:none;">点击开始体验</button></div>
+    <div id="loading">
+        <div class="loading-icon">🌌</div>
+        <div class="loading-text">正在定位您的位置...</div>
+        <div class="loading-sub">首次定位可能需要几秒钟</div>
+        <div class="countdown" id="countdown">15</div>
+        <div class="countdown-label">准备中...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:100%"></div></div>
+    </div>
     <div id="ui-overlay" style="display:none;">
         <h2>🌌 我的宇宙星空</h2>
         <p id="location-status">正在获取位置...</p>
-        <p>纬度: <span id="lat">--</span>° | 经度: <span id="lon">--</span>°</p>
+        <p>纬度: <span id="lat">--</span>° <span id="lat-dir">N</span></p>
+        <p>经度: <span id="lon">--</span>° <span id="lon-dir">E</span></p>
         <p>当地时间: <span id="local-time">--</span></p>
         <p>太阳高度: <span id="sun-alt">--</span>°</p>
         <p>可见天体: <span id="visible-objects">--</span></p>
@@ -109,14 +197,25 @@
     </div>
     <div id="tooltip" class="tooltip"></div>
     <div id="compass">方位</div>
+    <div id="day-night-indicator">☀️ 白昼</div>
     <button id="toggle-list">天体列表</button>
     <div id="object-list">
-        <h3>🌟 可见天体</h3>
+        <h3>🌟 所有天体</h3>
         <div id="object-list-content"></div>
     </div>
     <div id="search-box">
         <input type="text" id="star-search" placeholder="搜索天体...">
         <button id="search-btn">搜索</button>
+    </div>
+    <div id="city-panel">
+        <h3>🌍 选择观测地点</h3>
+        <div id="city-grid"></div>
+        <button class="manual-toggle" id="manual-toggle-btn">📐 手动输入经纬度</button>
+        <div class="manual-section" id="manual-section">
+            <label style="color:#8899aa; font-size:11px;">纬度:</label><input id="input-lat" placeholder="39.9">
+            <label style="color:#8899aa; font-size:11px;">经度:</label><input id="input-lon" placeholder="116.4">
+            <button id="apply-location">定位</button>
+        </div>
     </div>
     <div id="time-control">
         <label>时间偏移:</label>
@@ -124,6 +223,8 @@
         <span id="time-offset" style="color:#ccddee; font-size:12px;">0h</span>
         <button id="reset-time">回到现在</button>
     </div>
+    <button id="screenshot-btn">📸 截图</button>
+    <button id="change-location-btn" style="position:fixed; bottom:30px; left:140px; z-index:100; padding:8px 15px; background:rgba(100,150,255,0.3); border:1px solid rgba(100,150,255,0.5); color:white; border-radius:8px; cursor:pointer; font-size:13px; backdrop-filter:blur(5px);">🌍 切换地点</button>
     <div id="canvas-container"></div>
 
     <script type="importmap">
@@ -161,8 +262,6 @@
             const latRad = lat * Math.PI / 180;
             const sinAlt = Math.sin(decRad) * Math.sin(latRad) + Math.cos(decRad) * Math.cos(latRad) * Math.cos(haRad);
             const altitude = Math.asin(Math.max(-1, Math.min(1, sinAlt))) * 180 / Math.PI;
-            
-            // 安全计算方位角，避免NaN
             let azimuth = 0;
             const cosAlt = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinAlt))));
             if (Math.abs(cosAlt) > 1e-10 && Math.abs(Math.cos(latRad)) > 1e-10) {
@@ -170,158 +269,278 @@
                 azimuth = Math.acos(Math.max(-1, Math.min(1, cosAz))) * 180 / Math.PI;
                 if (Math.sin(haRad) > 0) azimuth = 360 - azimuth;
             }
-            
             return { altitude, azimuth };
         }
         
         function horizontalTo3D(altitude, azimuth, radius) {
-            // 安全检查
-            if (isNaN(altitude) || isNaN(azimuth)) {
-                return { x: 0, y: -radius, z: 0 }; // 默认返回天底位置
-            }
+            if (isNaN(altitude) || isNaN(azimuth)) return { x: 0, y: -radius, z: 0 };
             const altRad = altitude * Math.PI / 180;
             const azRad = azimuth * Math.PI / 180;
             const y = Math.sin(altRad) * radius;
             const r_proj = Math.cos(altRad) * radius;
-            const x = Math.sin(azRad) * r_proj;
-            const z = Math.cos(azRad) * r_proj;
-            return { x, y, z };
+            return { x: Math.sin(azRad) * r_proj, y, z: Math.cos(azRad) * r_proj };
         }
 
-        // ========== 行星位置计算（使用可靠的简化公式） ==========
+        // ========== 昼夜天空颜色（带渐变和流动性） ==========
+        let skyShaderMaterial = null;
+        let skyMesh = null;
+
+        function createSkyShader() {
+            const vertexShader = `
+                varying vec3 vWorldPosition;
+                void main() {
+                    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                    vWorldPosition = worldPosition.xyz;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `;
+
+            const fragmentShader = `
+                uniform float uTime;
+                uniform float uSunAltitude;
+                uniform vec3 uSunDirection;
+                varying vec3 vWorldPosition;
+
+                // 噪声函数
+                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+                float snoise(vec3 v) {
+                    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                    vec3 i = floor(v + dot(v, C.yyy));
+                    vec3 x0 = v - i + dot(i, C.xxx);
+                    vec3 g = step(x0.yzx, x0.xyz);
+                    vec3 l = 1.0 - g;
+                    vec3 i1 = min(g.xyz, l.zxy);
+                    vec3 i2 = max(g.xyz, l.zxy);
+                    vec3 x1 = x0 - i1 + C.xxx;
+                    vec3 x2 = x0 - i2 + C.yyy;
+                    vec3 x3 = x0 - D.yyy;
+                    i = mod289(i);
+                    vec4 p = permute(permute(permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                    float n_ = 0.142857142857;
+                    vec3 ns = n_ * D.wyz - D.xzx;
+                    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                    vec4 x_ = floor(j * ns.z);
+                    vec4 y_ = floor(j - 7.0 * x_);
+                    vec4 x = x_ * ns.x + ns.yyyy;
+                    vec4 y = y_ * ns.x + ns.yyyy;
+                    vec4 h = 1.0 - abs(x) - abs(y);
+                    vec4 b0 = vec4(x.xy, y.xy);
+                    vec4 b1 = vec4(x.zw, y.zw);
+                    vec4 s0 = floor(b0)*2.0 + 1.0;
+                    vec4 s1 = floor(b1)*2.0 + 1.0;
+                    vec4 sh = -step(h, vec4(0.0));
+                    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                    vec3 p0 = vec3(a0.xy, h.x);
+                    vec3 p1 = vec3(a0.zw, h.y);
+                    vec3 p2 = vec3(a1.xy, h.z);
+                    vec3 p3 = vec3(a1.zw, h.w);
+                    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                    m = m * m;
+                    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+                }
+
+                // 极光噪声
+                float auroraNoise(vec2 uv, float time) {
+                    float n = 0.0;
+                    float amp = 0.5;
+                    float freq = 1.0;
+                    for(int i = 0; i < 4; i++) {
+                        n += amp * snoise(vec3(uv * freq, time * 0.1));
+                        amp *= 0.5;
+                        freq *= 2.0;
+                    }
+                    return n;
+                }
+
+                void main() {
+                    vec3 dir = normalize(vWorldPosition);
+                    float altitude = dir.y;
+
+                    // 基础天空颜色定义
+                    vec3 dayTop = vec3(0.2, 0.5, 0.9);      // 白天顶部 - 柔和蓝
+                    vec3 dayHorizon = vec3(0.5, 0.75, 1.0);  // 白天地平线 - 浅蓝白
+                    vec3 sunsetTop = vec3(0.15, 0.1, 0.25);  // 黄昏顶部 - 深紫
+                    vec3 sunsetHorizon = vec3(1.0, 0.4, 0.2); // 黄昏地平线 - 橙红
+                    vec3 twilightTop = vec3(0.05, 0.05, 0.15); // 暮光顶部
+                    vec3 twilightHorizon = vec3(0.3, 0.2, 0.4); // 暮光地平线 - 紫
+                    vec3 nightTop = vec3(0.0, 0.0, 0.05);     // 夜晚顶部
+                    vec3 nightHorizon = vec3(0.02, 0.03, 0.08); // 夜晚地平线
+
+                    vec3 color;
+                    float horizonBlend = pow(1.0 - abs(altitude), 2.0);
+
+                    if (uSunAltitude > 10.0) {
+                        // 白天
+                        float t = min(1.0, uSunAltitude / 60.0);
+                        vec3 top = mix(dayTop, vec3(0.1, 0.3, 0.8), t);
+                        vec3 horizon = mix(dayHorizon, vec3(0.3, 0.6, 1.0), t);
+                        color = mix(top, horizon, horizonBlend);
+                    } else if (uSunAltitude > -6.0) {
+                        // 黄昏/黎明
+                        float t = (uSunAltitude + 6.0) / 16.0;
+                        vec3 top = mix(sunsetTop, dayTop, t);
+                        vec3 horizon = mix(sunsetHorizon, dayHorizon, t);
+                        color = mix(top, horizon, horizonBlend);
+                        // 添加晚霞流动
+                        float flow = snoise(vec3(dir.xz * 3.0, uTime * 0.05)) * 0.5 + 0.5;
+                        color += vec3(0.3, 0.1, 0.05) * flow * (1.0 - t) * horizonBlend;
+                    } else if (uSunAltitude > -18.0) {
+                        // 暮光
+                        float t = (uSunAltitude + 18.0) / 12.0;
+                        vec3 top = mix(twilightTop, sunsetTop, t);
+                        vec3 horizon = mix(twilightHorizon, sunsetHorizon, t);
+                        color = mix(top, horizon, horizonBlend);
+                    } else {
+                        // 夜晚
+                        color = mix(nightTop, nightHorizon, horizonBlend);
+                    }
+
+                    // 添加大气流动感
+                    float flowNoise = snoise(vec3(dir.xz * 2.0, uTime * 0.02)) * 0.5 + 0.5;
+                    color += vec3(0.01, 0.015, 0.03) * flowNoise * (1.0 - horizonBlend);
+
+                    // 极光效果（仅在高纬度且夜间显示）
+                    float lat = abs(dir.y);
+                    float auroraIntensity = 0.0;
+                    if (uSunAltitude < -6.0 && lat > 0.5) {
+                        vec2 auroraUV = vec2(dir.x * 2.0 + uTime * 0.03, dir.z + sin(uTime * 0.1) * 0.2);
+                        float aurora = auroraNoise(auroraUV, uTime);
+                        aurora = smoothstep(0.1, 0.6, aurora);
+                        float latFade = smoothstep(0.5, 0.9, lat) * smoothstep(1.0, 0.7, lat);
+                        auroraIntensity = aurora * latFade * 0.6;
+
+                        // 极光颜色：绿色为主，带紫色边缘
+                        vec3 auroraColor = mix(vec3(0.2, 0.9, 0.4), vec3(0.6, 0.2, 0.8), aurora * 0.5);
+                        color += auroraColor * auroraIntensity;
+
+                        // 极光帷幕效果
+                        float curtain = sin(dir.x * 10.0 + uTime * 0.5) * 0.5 + 0.5;
+                        color += auroraColor * curtain * auroraIntensity * 0.3;
+                    }
+
+                    // 太阳/月亮光晕
+                    float sunDot = dot(dir, normalize(uSunDirection));
+                    if (sunDot > 0.0 && uSunAltitude > -6.0) {
+                        float glow = pow(sunDot, 8.0) * 0.3;
+                        color += vec3(1.0, 0.9, 0.7) * glow;
+                    }
+
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+
+            const geometry = new THREE.SphereGeometry(900, 32, 32);
+            skyShaderMaterial = new THREE.ShaderMaterial({
+                vertexShader,
+                fragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uSunAltitude: { value: -30 },
+                    uSunDirection: { value: new THREE.Vector3(0, -1, 0) }
+                },
+                side: THREE.BackSide,
+                depthWrite: false
+            });
+            skyMesh = new THREE.Mesh(geometry, skyShaderMaterial);
+            return skyMesh;
+        }
+
+        // ========== 行星位置计算 ==========
         function getPlanetPosition(name, date) {
             const JD = getJulianDay(date);
-            const d = JD - 2451545.0; // 从J2000起算的天数
-            const T = d / 36525.0; // 儒略世纪数
-            
+            const d = JD - 2451545.0;
             let ra, dec, mag, color, size;
+            const epsilon = 23.439;
+            const epsilonRad = epsilon * Math.PI / 180;
             
             switch(name) {
                 case '太阳': {
-                    // 太阳黄经（简化公式）
                     const L = 280.46 + 0.9856474 * d;
-                    const g = 357.528 + 0.9856003 * d; // 平近点角
+                    const g = 357.528 + 0.9856003 * d;
                     const gRad = g * Math.PI / 180;
-                    // 太阳黄经（考虑椭圆轨道修正）
                     const lambda = L + 1.915 * Math.sin(gRad) + 0.020 * Math.sin(2 * gRad);
-                    // 黄赤交角
-                    const epsilon = 23.439 - 0.0000004 * d;
                     const lambdaRad = lambda * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
-                    // 转换为赤道坐标
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(lambdaRad) * Math.sin(epsilonRad)) * 180 / Math.PI;
-                    mag = -26.7;
-                    color = 0xffaa00;
-                    size = 8;
+                    mag = -26.7; color = 0xffaa00; size = 8;
                     break;
                 }
                 case '月亮': {
-                    // 月亮位置（简化）
                     const L = 218.32 + 13.176396 * d;
-                    const M = 134.96 + 13.064993 * d; // 平近点角
+                    const M = 134.96 + 13.064993 * d;
                     const MRad = M * Math.PI / 180;
                     const lambda = L + 6.29 * Math.sin(MRad);
-                    const beta = 5.13 * Math.sin((93.3 + 13.064993 * d) * Math.PI / 180); // 黄纬
+                    const beta = 5.13 * Math.sin((93.3 + 13.064993 * d) * Math.PI / 180);
                     const lambdaRad = lambda * Math.PI / 180;
                     const betaRad = beta * Math.PI / 180;
-                    const epsilon = 23.439 - 0.0000004 * d;
-                    const epsilonRad = epsilon * Math.PI / 180;
-                    // 转换为赤道坐标
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = -12.7;
-                    color = 0xdddddd;
-                    size = 6;
+                    mag = -12.7; color = 0xdddddd; size = 6;
                     break;
                 }
                 case '水星': {
                     const L = 252.25 + 4.092338 * d;
-                    const lambda = L; // 简化：黄经 ≈ 平均黄经
-                    const beta = 7.0 * Math.sin((L * 1.0 + 50) * Math.PI / 180); // 黄纬（简化）
-                    const epsilon = 23.439;
-                    const lambdaRad = lambda * Math.PI / 180;
+                    const lambdaRad = L * Math.PI / 180;
+                    const beta = 7.0 * Math.sin((L + 50) * Math.PI / 180);
                     const betaRad = beta * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = -0.4;
-                    color = 0xaaaaaa;
-                    size = 2.5;
-                    break;
+                    mag = -0.4; color = 0xaaaaaa; size = 2.5; break;
                 }
                 case '金星': {
                     const L = 181.98 + 1.602130 * d;
-                    const lambda = L;
-                    const beta = 3.39 * Math.sin((L * 1.0 + 130) * Math.PI / 180);
-                    const epsilon = 23.439;
-                    const lambdaRad = lambda * Math.PI / 180;
+                    const lambdaRad = L * Math.PI / 180;
+                    const beta = 3.39 * Math.sin((L + 130) * Math.PI / 180);
                     const betaRad = beta * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = -4.4;
-                    color = 0xffeebb;
-                    size = 4.5;
-                    break;
+                    mag = -4.4; color = 0xffeebb; size = 4.5; break;
                 }
                 case '火星': {
                     const L = 355.43 + 0.524033 * d;
-                    const lambda = L;
-                    const beta = 1.85 * Math.sin((L * 1.0 + 70) * Math.PI / 180);
-                    const epsilon = 23.439;
-                    const lambdaRad = lambda * Math.PI / 180;
+                    const lambdaRad = L * Math.PI / 180;
+                    const beta = 1.85 * Math.sin((L + 70) * Math.PI / 180);
                     const betaRad = beta * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = -1.5;
-                    color = 0xff6644;
-                    size = 3.5;
-                    break;
+                    mag = -1.5; color = 0xff6644; size = 3.5; break;
                 }
                 case '木星': {
                     const L = 34.35 + 0.083091 * d;
-                    const lambda = L;
-                    const beta = 1.31 * Math.sin((L * 1.0 + 200) * Math.PI / 180);
-                    const epsilon = 23.439;
-                    const lambdaRad = lambda * Math.PI / 180;
+                    const lambdaRad = L * Math.PI / 180;
+                    const beta = 1.31 * Math.sin((L + 200) * Math.PI / 180);
                     const betaRad = beta * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = -2.5;
-                    color = 0xddbb88;
-                    size = 5.5;
-                    break;
+                    mag = -2.5; color = 0xddbb88; size = 5.5; break;
                 }
                 case '土星': {
                     const L = 50.08 + 0.033444 * d;
-                    const lambda = L;
-                    const beta = 2.49 * Math.sin((L * 1.0 + 300) * Math.PI / 180);
-                    const epsilon = 23.439;
-                    const lambdaRad = lambda * Math.PI / 180;
+                    const lambdaRad = L * Math.PI / 180;
+                    const beta = 2.49 * Math.sin((L + 300) * Math.PI / 180);
                     const betaRad = beta * Math.PI / 180;
-                    const epsilonRad = epsilon * Math.PI / 180;
                     ra = Math.atan2(Math.sin(lambdaRad) * Math.cos(epsilonRad) - Math.tan(betaRad) * Math.sin(epsilonRad), Math.cos(lambdaRad)) * 180 / Math.PI;
                     dec = Math.asin(Math.sin(betaRad) * Math.cos(epsilonRad) + Math.cos(betaRad) * Math.sin(epsilonRad) * Math.sin(lambdaRad)) * 180 / Math.PI;
-                    mag = 0.3;
-                    color = 0xddcc88;
-                    size = 5;
-                    break;
+                    mag = 0.3; color = 0xddcc88; size = 5; break;
                 }
-                default:
-                    return null;
+                default: return null;
             }
-            
-            // 规范化
             ra = (ra + 360) % 360;
-            if (ra < 0) ra += 360;
-            
-            return { ra, dec, mag, color, size };
+            return { ra: isNaN(ra) ? 0 : ra, dec: isNaN(dec) ? 0 : dec, mag, color, size };
         }
 
-        // ========== 卫星数据 ==========
+        // ========== 卫星 ==========
         const satellites = [
             { name: '国际空间站(ISS)', type: '人造卫星' },
             { name: '天宫空间站', type: '人造卫星' },
@@ -329,17 +548,13 @@
             { name: '星链-1', type: '人造卫星' }
         ];
 
-        // 模拟卫星位置
         function getSatellitePosition(name, date) {
             const seed = name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
             const hours = date.getHours() + date.getMinutes() / 60;
-            
-            // 模拟卫星轨道周期约90分钟
             const orbitPhase = ((hours * 60 + seed) % 90) / 90;
             const ra = (orbitPhase * 360 + seed) % 360;
             const dec = Math.sin(orbitPhase * Math.PI * 2 + seed) * 51.6;
             const isVisible = Math.sin(orbitPhase * Math.PI * 2) > 0.3;
-            
             return { ra, dec, mag: 1.0, color: 0x00ff88, size: 1.5, isVisible };
         }
 
@@ -351,7 +566,19 @@
             ["心宿二", "尾宿八"]
         ];
 
-        // ========== 亮星数据 ==========
+        // ========== 亮星数据 + 详情 ==========
+        const starDetails = {
+            "天狼星": { distance: "8.6光年", myth: "古埃及视为尼罗河洪水预兆，中国古代称'犬星'", fact: "夜空中最亮的恒星，实际是双星系统" },
+            "织女星": { distance: "25光年", myth: "牛郎织女传说的织女，对应西方天琴座α星", fact: "自转速度很快，周期仅12.5小时" },
+            "牛郎星": { distance: "16.7光年", myth: "牛郎织女传说中牛郎，对应天鹰座α星", fact: "比织女星更热、更亮" },
+            "北极星": { distance: "433光年", myth: "指引方向之星，中国古代称'勾陈一'", fact: "目前离北天极最近，但约14000年后会被织女星取代" },
+            "大角星": { distance: "36.7光年", myth: "东方苍龙七宿第一宿，古称'岁星'", fact: "全天第三亮星，橙巨星" },
+            "参宿四": { distance: "700光年", myth: "猎户座右肩，中国古代属参宿", fact: "红超巨星，已接近恒星末期，可能在10万年内爆发为超新星" },
+            "心宿二": { distance: "550光年", myth: "东方苍龙之心，称'大火'，七夕时西沉", fact: "红超巨星，天蝎座α星，颜色火红" },
+            "天津四": { distance: "2600光年", myth: "属于天鹅座，位于银河中", fact: "超蓝巨星，亮度是太阳的19万倍" },
+            "轩辕十四": { distance: "79光年", myth: "轩辕黄帝对应星座的中心星，狮子座α", fact: "高速自转明星，赤道速度超400km/s" }
+        };
+
         const allStars = [
             { name: "天狼星", ra: 101.29, dec: -16.72, mag: -1.46, constellation: "大犬座" },
             { name: "老人星", ra: 95.99, dec: -52.70, mag: -0.74, constellation: "船底座" },
@@ -398,8 +625,11 @@
 
         // ========== Three.js 场景 ==========
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000011);
         scene.fog = new THREE.FogExp2(0x000011, 0.00025);
+
+        // 创建着色器天空
+        const sky = createSkyShader();
+        scene.add(sky);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -438,11 +668,62 @@
             }
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            const material = new THREE.PointsMaterial({ size: 1.2, vertexColors: true, transparent: true, opacity: 0.8, sizeAttenuation: true });
-            return new THREE.Points(geometry, material);
+            return new THREE.Points(geometry, new THREE.PointsMaterial({ size: 1.2, vertexColors: true, transparent: true, opacity: 0.8, sizeAttenuation: true }));
         }
         const bgStars = createBackgroundStars();
         scene.add(bgStars);
+
+        // ========== 银河系星云背景 ==========
+        function createMilkyWay() {
+            const count = 8000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const sizes = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+                const i3 = i * 3;
+                // 银河平面分布（银道坐标系近似）
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 600 + Math.random() * 500;
+                const thickness = (Math.random() - 0.5) * 80 * Math.exp(-radius / 800);
+
+                // 银道面倾斜约60度
+                const tilt = 60 * Math.PI / 180;
+                const x = radius * Math.cos(angle);
+                const y = thickness + radius * Math.sin(angle) * Math.sin(tilt);
+                const z = radius * Math.sin(angle) * Math.cos(tilt);
+
+                positions[i3] = x;
+                positions[i3 + 1] = y;
+                positions[i3 + 2] = z;
+
+                // 星云颜色：中心偏暖，边缘偏冷
+                const distFromCenter = radius / 1100;
+                const warm = Math.max(0, 1 - distFromCenter);
+                colors[i3] = 0.4 + warm * 0.3;     // R
+                colors[i3 + 1] = 0.3 + warm * 0.2; // G
+                colors[i3 + 2] = 0.5 + warm * 0.1; // B
+
+                sizes[i] = 2 + Math.random() * 4;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            return new THREE.Points(geometry, new THREE.PointsMaterial({
+                size: 3,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.25,
+                sizeAttenuation: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            }));
+        }
+        const milkyWay = createMilkyWay();
+        scene.add(milkyWay);
 
         // ========== 流星系统 ==========
         const meteors = [];
@@ -466,275 +747,266 @@
         }
 
         // ========== 渲染星空 ==========
-        let userLat = 39.9, userLon = 116.4;
+        let userLat = 0, userLon = 0, userCity = '';
         let timeOffset = 0;
         let starMeshes = [], lineMeshes = [], starPositions = {};
-        let allObjects = []; // 当前可见的天体（用于3D渲染）
-        let fullObjectDB = []; // 完整天体数据库（包含所有天体，用于搜索和列表）
+        let allObjects = [];
+        let fullObjectDB = [];
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // 构建完整天体数据库（只构建一次）
         function buildFullObjectDB() {
             const db = [];
-            
-            // 添加所有恒星
-            allStars.forEach(star => {
-                db.push({
-                    name: star.name,
-                    ra: star.ra,
-                    dec: star.dec,
-                    mag: star.mag,
-                    type: '恒星',
-                    constellation: star.constellation
-                });
-            });
-            
-            // 添加行星（使用占位符，实际位置在renderSky中计算）
-            const planetNames = ['太阳', '月亮', '水星', '金星', '火星', '木星', '土星'];
-            planetNames.forEach(name => {
-                db.push({
-                    name: name,
-                    type: '行星',
-                    isPlanet: true
-                });
-            });
-            
-            // 添加卫星
-            satellites.forEach(sat => {
-                db.push({
-                    name: sat.name,
-                    type: sat.type,
-                    isSatellite: true
-                });
-            });
-            
+            allStars.forEach(star => db.push({ name: star.name, ra: star.ra, dec: star.dec, mag: star.mag, type: '恒星', constellation: star.constellation }));
+            ['太阳', '月亮', '水星', '金星', '火星', '木星', '土星'].forEach(name => db.push({ name, type: '行星', isPlanet: true }));
+            satellites.forEach(sat => db.push({ name: sat.name, type: sat.type, isSatellite: true }));
             return db;
         }
 
+        function getLocationName(lat, lon) {
+            // 使用简化的反向地理编码
+            const latDir = lat >= 0 ? 'N' : 'S';
+            const lonDir = lon >= 0 ? 'E' : 'W';
+            const latAbs = Math.abs(lat).toFixed(2);
+            const lonAbs = Math.abs(lon).toFixed(2);
+            
+            // 常见城市近似匹配
+            const cities = [
+                { lat: 39.9, lon: 116.4, name: '北京' },
+                { lat: 31.2, lon: 121.5, name: '上海' },
+                { lat: 22.5, lon: 114.1, name: '深圳' },
+                { lat: 23.1, lon: 113.3, name: '广州' },
+                { lat: 30.3, lon: 120.2, name: '杭州' },
+                { lat: 29.6, lon: 91.1, name: '拉萨' },
+                { lat: 36.6, lon: 101.8, name: '西宁' },
+                { lat: 34.3, lon: 108.9, name: '西安' },
+                { lat: 30.6, lon: 114.3, name: '武汉' },
+                { lat: 28.7, lon: 115.9, name: '南昌' },
+                { lat: 25.0, lon: 102.7, name: '昆明' },
+                { lat: 30.6, lon: 104.1, name: '成都' },
+                { lat: 35.9, lon: 104.2, name: '兰州' },
+                { lat: 43.8, lon: 87.6, name: '乌鲁木齐' },
+                { lat: 22.2, lon: 113.5, name: '珠海' },
+                { lat: 40.8, lon: 111.7, name: '呼和浩特' },
+                { lat: 32.1, lon: 118.8, name: '南京' },
+                { lat: 43.0, lon: 125.3, name: '长春' },
+                { lat: 45.8, lon: 126.5, name: '哈尔滨' },
+                { lat: 41.8, lon: 123.4, name: '沈阳' },
+                { lat: 38.0, lon: 114.5, name: '石家庄' },
+                { lat: 36.1, lon: 103.8, name: '兰州' },
+                { lat: 34.8, lon: 113.7, name: '郑州' },
+                { lat: 37.5, lon: 112.5, name: '太原' },
+                { lat: 39.0, lon: 117.2, name: '天津' },
+                { lat: 24.5, lon: 118.1, name: '厦门' },
+                { lat: 26.1, lon: 119.3, name: '福州' },
+                { lat: 32.1, lon: 110.8, name: '神农架' },
+            ];
+            
+            let nearest = null, minDist = Infinity;
+            cities.forEach(c => {
+                const dist = Math.sqrt((lat - c.lat) ** 2 + (lon - c.lon) ** 2);
+                if (dist < minDist) { minDist = dist; nearest = c; }
+            });
+            
+            if (minDist < 1.0 && nearest) {
+                return `${nearest.name} (${latAbs}°${latDir}, ${lonAbs}°${lonDir})`;
+            }
+            return `自定义位置 (${latAbs}°${latDir}, ${lonAbs}°${lonDir})`;
+        }
+
         function renderSky() {
-            // 清除旧物体
             starMeshes.forEach(m => scene.remove(m));
             lineMeshes.forEach(m => scene.remove(m));
-            starMeshes = [];
-            lineMeshes = [];
-            starPositions = {};
-            allObjects = [];
+            starMeshes = []; lineMeshes = []; starPositions = {}; allObjects = [];
 
             const now = new Date();
             now.setHours(now.getHours() + timeOffset);
             const lst = getLST(now, userLon);
-            const visibleConstellations = new Set();
 
-            document.getElementById('lat').textContent = userLat.toFixed(2);
-            document.getElementById('lon').textContent = userLon.toFixed(2);
+            document.getElementById('lat').textContent = Math.abs(userLat).toFixed(2);
+            document.getElementById('lat-dir').textContent = userLat >= 0 ? 'N' : 'S';
+            document.getElementById('lon').textContent = Math.abs(userLon).toFixed(2);
+            document.getElementById('lon-dir').textContent = userLon >= 0 ? 'E' : 'W';
             document.getElementById('local-time').textContent = now.toLocaleString('zh-CN');
 
-            // 渲染恒星
+            // 渲染恒星（带发光效果）
             allStars.forEach(star => {
                 const { altitude, azimuth } = equatorialToHorizontal(star.ra, star.dec, userLat, lst);
                 if (altitude < -5) return;
-                visibleConstellations.add(star.constellation);
                 const pos = horizontalTo3D(altitude, azimuth, 500);
                 const size = Math.max(0.4, (4.5 - star.mag) * 0.35);
-                const geometry = new THREE.SphereGeometry(size, 16, 16);
-                const material = new THREE.MeshBasicMaterial({ 
-                    color: star.mag < 0 ? 0xaaddff : 0xffffff, 
-                    transparent: true, 
-                    opacity: Math.min(1, (5 - star.mag) / 4) 
-                });
-                const mesh = new THREE.Mesh(geometry, material);
+                const brightness = Math.min(1, (5 - star.mag) / 4);
+
+                // 根据星等选择颜色（模拟恒星色温）
+                let starColor = 0xffffff;
+                if (star.mag < 0) starColor = 0xaaddff;      // 极亮星偏蓝
+                else if (star.mag < 1) starColor = 0xffffff;  // 亮星白色
+                else if (star.mag < 2) starColor = 0xfff8e7;  // 中等偏黄白
+                else starColor = 0xffeedd;                    // 暗星偏橙
+
+                const mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(size, 16, 16),
+                    new THREE.MeshBasicMaterial({ color: starColor, transparent: true, opacity: brightness })
+                );
                 mesh.position.set(pos.x, pos.y, pos.z);
-                mesh.userData = { 
-                    name: star.name, 
-                    mag: star.mag, 
-                    constellation: star.constellation, 
-                    altitude, 
-                    azimuth, 
-                    type: '恒星' 
-                };
-                scene.add(mesh);
-                starMeshes.push(mesh);
-                starPositions[star.name] = pos;
-                allObjects.push({ 
-                    name: star.name, 
-                    altitude, 
-                    azimuth, 
-                    mag: star.mag, 
-                    type: '恒星', 
-                    constellation: star.constellation 
-                });
-                
-                // 亮星光晕
-                if (star.mag < 1.5) {
-                    const glowGeo = new THREE.SphereGeometry(size * 4, 16, 16);
-                    const glowMat = new THREE.MeshBasicMaterial({ 
-                        color: 0x88aaff, 
-                        transparent: true, 
-                        opacity: 0.06 
-                    });
-                    const glow = new THREE.Mesh(glowGeo, glowMat);
-                    glow.position.copy(mesh.position);
-                    scene.add(glow);
-                    starMeshes.push(glow);
+                mesh.userData = { name: star.name, mag: star.mag, constellation: star.constellation, altitude, azimuth, type: '恒星' };
+                scene.add(mesh); starMeshes.push(mesh); starPositions[star.name] = pos;
+                allObjects.push({ name: star.name, altitude, azimuth, mag: star.mag, type: '恒星', constellation: star.constellation });
+
+                // 亮星光晕（多层，更真实）
+                if (star.mag < 2.5) {
+                    const glowIntensity = (2.5 - star.mag) / 2.5; // 越亮光晕越强
+                    // 内层光晕
+                    const innerGlow = new THREE.Mesh(
+                        new THREE.SphereGeometry(size * 2.5, 16, 16),
+                        new THREE.MeshBasicMaterial({
+                            color: starColor,
+                            transparent: true,
+                            opacity: 0.12 * glowIntensity,
+                            blending: THREE.AdditiveBlending
+                        })
+                    );
+                    innerGlow.position.copy(mesh.position);
+                    scene.add(innerGlow); starMeshes.push(innerGlow);
+
+                    // 外层光晕（仅对亮星）
+                    if (star.mag < 1.5) {
+                        const outerGlow = new THREE.Mesh(
+                            new THREE.SphereGeometry(size * 5, 16, 16),
+                            new THREE.MeshBasicMaterial({
+                                color: starColor,
+                                transparent: true,
+                                opacity: 0.04 * glowIntensity,
+                                blending: THREE.AdditiveBlending
+                            })
+                        );
+                        outerGlow.position.copy(mesh.position);
+                        scene.add(outerGlow); starMeshes.push(outerGlow);
+                    }
                 }
             });
 
-            // 渲染星座连线
-            constellationLines.forEach(([name1, name2]) => {
-                const pos1 = starPositions[name1];
-                const pos2 = starPositions[name2];
-                if (!pos1 || !pos2) return;
-                const points = [
-                    new THREE.Vector3(pos1.x, pos1.y, pos1.z), 
-                    new THREE.Vector3(pos2.x, pos2.y, pos2.z)
-                ];
-                const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                const material = new THREE.LineBasicMaterial({ 
-                    color: 0x4466aa, 
-                    transparent: true, 
-                    opacity: 0.4 
-                });
-                const line = new THREE.Line(geometry, material);
-                scene.add(line);
-                lineMeshes.push(line);
+            // 星座连线
+            constellationLines.forEach(([n1, n2]) => {
+                const p1 = starPositions[n1], p2 = starPositions[n2];
+                if (!p1 || !p2) return;
+                const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p1.x,p1.y,p1.z), new THREE.Vector3(p2.x,p2.y,p2.z)]),
+                    new THREE.LineBasicMaterial({ color: 0x4466aa, transparent: true, opacity: 0.4 }));
+                scene.add(line); lineMeshes.push(line);
             });
 
-            // 渲染行星
-            const planetNames = ['太阳', '月亮', '水星', '金星', '火星', '木星', '土星'];
-            planetNames.forEach(name => {
+            // 昼夜变化 - 更新着色器天空
+            const sun = getPlanetPosition('太阳', now);
+            const sunAlt = equatorialToHorizontal(sun.ra, sun.dec, userLat, lst).altitude;
+            document.getElementById('sun-alt').textContent = sunAlt.toFixed(1);
+            if (skyShaderMaterial) {
+                skyShaderMaterial.uniforms.uSunAltitude.value = sunAlt;
+                // 计算太阳方向
+                const sunAz = equatorialToHorizontal(sun.ra, sun.dec, userLat, lst).azimuth;
+                const sunDir = new THREE.Vector3(
+                    Math.cos(sunAlt * Math.PI / 180) * Math.sin(sunAz * Math.PI / 180),
+                    Math.sin(sunAlt * Math.PI / 180),
+                    Math.cos(sunAlt * Math.PI / 180) * Math.cos(sunAz * Math.PI / 180)
+                );
+                skyShaderMaterial.uniforms.uSunDirection.value.copy(sunDir);
+            }
+            
+            // 昼夜指示器
+            const indicator = document.getElementById('day-night-indicator');
+            if (sunAlt > 0) {
+                indicator.textContent = '☀️ 白昼';
+                indicator.style.background = 'rgba(255,200,100,0.4)';
+            } else if (sunAlt > -6) {
+                indicator.textContent = '🌅 黄昏';
+                indicator.style.background = 'rgba(255,100,50,0.4)';
+            } else if (sunAlt > -18) {
+                indicator.textContent = '🌆 暮光';
+                indicator.style.background = 'rgba(50,50,100,0.4)';
+            } else {
+                indicator.textContent = '🌙 夜间';
+                indicator.style.background = 'rgba(0,0,50,0.4)';
+            }
+
+            // 渲染行星（带发光效果）
+            ['太阳', '月亮', '水星', '金星', '火星', '木星', '土星'].forEach(name => {
                 try {
                     const planet = getPlanetPosition(name, now);
                     if (!planet) return;
-                    
                     const { altitude, azimuth } = equatorialToHorizontal(planet.ra, planet.dec, userLat, lst);
-                    
-                    // 更新完整数据库中该行星的信息
                     const dbEntry = fullObjectDB.find(o => o.name === name);
-                    if (dbEntry) {
-                        dbEntry.ra = planet.ra;
-                        dbEntry.dec = planet.dec;
-                        dbEntry.mag = planet.mag;
-                        dbEntry.altitude = altitude;
-                        dbEntry.azimuth = azimuth;
-                        dbEntry.isVisible = altitude > -10;
-                    }
-                    
+                    if (dbEntry) { dbEntry.ra = planet.ra; dbEntry.dec = planet.dec; dbEntry.mag = planet.mag; dbEntry.altitude = altitude; dbEntry.azimuth = azimuth; dbEntry.isVisible = altitude > -10; }
                     if (altitude < -10) return;
-                    
                     const pos = horizontalTo3D(altitude, azimuth, 500);
-                    const geometry = new THREE.SphereGeometry(planet.size, 32, 32);
-                    const material = new THREE.MeshBasicMaterial({ color: planet.color });
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.set(pos.x, pos.y, pos.z);
-                    mesh.userData = { 
-                        name, 
-                        mag: planet.mag, 
-                        altitude, 
-                        azimuth, 
-                        type: '行星' 
-                    };
-                    scene.add(mesh);
-                    starMeshes.push(mesh);
-                    allObjects.push({ name, altitude, azimuth, mag: planet.mag, type: '行星' });
 
-                    // 太阳发光效果
+                    // 主行星体
+                    const mesh = new THREE.Mesh(new THREE.SphereGeometry(planet.size, 32, 32), new THREE.MeshBasicMaterial({ color: planet.color }));
+                    mesh.position.set(pos.x, pos.y, pos.z);
+                    mesh.userData = { name, mag: planet.mag, altitude, azimuth, type: '行星' };
+                    scene.add(mesh); starMeshes.push(mesh); allObjects.push({ name, altitude, azimuth, mag: planet.mag, type: '行星' });
+
+                    // 发光效果
                     if (name === '太阳') {
-                        const glowGeo = new THREE.SphereGeometry(planet.size * 6, 32, 32);
-                        const glowMat = new THREE.MeshBasicMaterial({ 
-                            color: 0xffaa00, 
-                            transparent: true, 
-                            opacity: 0.15 
+                        // 太阳光晕 - 多层渐变
+                        [3, 6, 12, 20].forEach((s, i) => {
+                            const glowColor = i < 2 ? 0xffdd44 : 0xff8844;
+                            const opacity = (0.3 / (i + 1));
+                            const g = new THREE.Mesh(
+                                new THREE.SphereGeometry(planet.size * s, 32, 32),
+                                new THREE.MeshBasicMaterial({ color: glowColor, transparent: true, opacity: opacity, blending: THREE.AdditiveBlending })
+                            );
+                            g.position.copy(mesh.position);
+                            scene.add(g); starMeshes.push(g);
                         });
-                        const glow = new THREE.Mesh(glowGeo, glowMat);
-                        glow.position.copy(mesh.position);
-                        scene.add(glow);
-                        starMeshes.push(glow);
                         document.getElementById('sun-alt').textContent = altitude.toFixed(1);
-                    }
-                    
-                    // 月亮光晕
-                    if (name === '月亮') {
-                        const glowGeo = new THREE.SphereGeometry(planet.size * 3, 32, 32);
-                        const glowMat = new THREE.MeshBasicMaterial({ 
-                            color: 0xffffff, 
-                            transparent: true, 
-                            opacity: 0.1 
+                    } else if (name === '月亮') {
+                        // 月亮柔和光晕
+                        [2, 4, 8].forEach((s, i) => {
+                            const g = new THREE.Mesh(
+                                new THREE.SphereGeometry(planet.size * s, 32, 32),
+                                new THREE.MeshBasicMaterial({ color: 0xeeeeff, transparent: true, opacity: 0.08 / (i + 1), blending: THREE.AdditiveBlending })
+                            );
+                            g.position.copy(mesh.position);
+                            scene.add(g); starMeshes.push(g);
                         });
-                        const glow = new THREE.Mesh(glowGeo, glowMat);
-                        glow.position.copy(mesh.position);
-                        scene.add(glow);
-                        starMeshes.push(glow);
+                    } else {
+                        // 其他行星的微弱光晕
+                        const g = new THREE.Mesh(
+                            new THREE.SphereGeometry(planet.size * 2.5, 16, 16),
+                            new THREE.MeshBasicMaterial({
+                                color: planet.color,
+                                transparent: true,
+                                opacity: 0.15,
+                                blending: THREE.AdditiveBlending
+                            })
+                        );
+                        g.position.copy(mesh.position);
+                        scene.add(g); starMeshes.push(g);
                     }
-                } catch (e) {
-                    console.warn(`渲染行星 ${name} 时出错:`, e);
-                }
+                } catch(e) { console.warn(`行星 ${name} 错误:`, e); }
             });
 
-            // 渲染人造卫星
+            // 渲染卫星
             satellites.forEach(sat => {
                 try {
-                    const satPos = getSatellitePosition(sat.name, now);
-                    
-                    const { altitude, azimuth } = equatorialToHorizontal(satPos.ra, satPos.dec, userLat, lst);
-                    
-                    // 更新完整数据库中该卫星的信息
+                    const sp = getSatellitePosition(sat.name, now);
+                    const { altitude, azimuth } = equatorialToHorizontal(sp.ra, sp.dec, userLat, lst);
                     const dbEntry = fullObjectDB.find(o => o.name === sat.name);
-                    if (dbEntry) {
-                        dbEntry.ra = satPos.ra;
-                        dbEntry.dec = satPos.dec;
-                        dbEntry.mag = satPos.mag;
-                        dbEntry.altitude = altitude;
-                        dbEntry.azimuth = azimuth;
-                        dbEntry.isVisible = satPos.isVisible && altitude > 10;
-                    }
-                    
-                    if (!satPos.isVisible || altitude < 10) return;
-                    
+                    if (dbEntry) { dbEntry.ra = sp.ra; dbEntry.dec = sp.dec; dbEntry.mag = sp.mag; dbEntry.altitude = altitude; dbEntry.azimuth = azimuth; dbEntry.isVisible = sp.isVisible && altitude > 10; }
+                    if (!sp.isVisible || altitude < 10) return;
                     const pos = horizontalTo3D(altitude, azimuth, 480);
-                    const geometry = new THREE.SphereGeometry(satPos.size, 16, 16);
-                    const material = new THREE.MeshBasicMaterial({ color: satPos.color });
-                    const mesh = new THREE.Mesh(geometry, material);
+                    const mesh = new THREE.Mesh(new THREE.SphereGeometry(sp.size, 16, 16), new THREE.MeshBasicMaterial({ color: sp.color }));
                     mesh.position.set(pos.x, pos.y, pos.z);
-                    mesh.userData = { 
-                        name: sat.name, 
-                        mag: satPos.mag, 
-                        altitude, 
-                        azimuth, 
-                        type: sat.type 
-                    };
-                    scene.add(mesh);
-                    starMeshes.push(mesh);
-                    allObjects.push({ 
-                        name: sat.name, 
-                        altitude, 
-                        azimuth, 
-                        mag: satPos.mag, 
-                        type: sat.type 
-                    });
-
-                    // 卫星闪烁效果
-                    const glowGeo = new THREE.SphereGeometry(satPos.size * 2, 16, 16);
-                    const glowMat = new THREE.MeshBasicMaterial({ 
-                        color: 0x00ff88, 
-                        transparent: true, 
-                        opacity: 0.2 
-                    });
-                    const glow = new THREE.Mesh(glowGeo, glowMat);
-                    glow.position.copy(mesh.position);
-                    scene.add(glow);
-                    starMeshes.push(glow);
-                } catch (e) {
-                    console.warn(`渲染卫星 ${sat.name} 时出错:`, e);
-                }
+                    mesh.userData = { name: sat.name, mag: sp.mag, altitude, azimuth, type: sat.type };
+                    scene.add(mesh); starMeshes.push(mesh); allObjects.push({ name: sat.name, altitude, azimuth, mag: sp.mag, type: sat.type });
+                    const g = new THREE.Mesh(new THREE.SphereGeometry(sp.size * 2, 16, 16), new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.2 }));
+                    g.position.copy(mesh.position); scene.add(g); starMeshes.push(g);
+                } catch(e) {}
             });
 
-            // 更新可见天体列表
             const visibleCount = allObjects.filter(o => o.altitude > 0).length;
             document.getElementById('visible-objects').textContent = visibleCount + ' 个';
             updateObjectList();
 
-            // 设置相机朝向南方
             const southPos = horizontalTo3D(20, 180, 10);
             camera.position.set(0, 1.6, 0);
             camera.lookAt(southPos.x, southPos.y, southPos.z);
@@ -742,21 +1014,14 @@
             controls.update();
         }
 
-        // ========== 天体列表更新 ==========
         function updateObjectList() {
             const list = document.getElementById('object-list-content');
             list.innerHTML = '';
-            
-            // 显示所有天体（包括地平线以下的），按类型分组
-            const sorted = fullObjectDB
-                .filter(o => o.altitude !== undefined) // 只显示已计算过位置的天体
-                .sort((a, b) => (b.altitude || -90) - (a.altitude || -90));
-            
+            const sorted = fullObjectDB.filter(o => o.altitude !== undefined).sort((a, b) => (b.altitude || -90) - (a.altitude || -90));
             sorted.forEach(obj => {
                 const div = document.createElement('div');
                 div.className = 'obj-item';
-                const icon = obj.type === '行星' ? '🪐' : 
-                            obj.type === '人造卫星' ? '🛰️' : '⭐';
+                const icon = obj.type === '行星' ? '🪐' : obj.type === '人造卫星' ? '🛰️' : '⭐';
                 const altText = obj.altitude !== undefined ? `${obj.altitude.toFixed(0)}°` : '--';
                 const visibleMark = obj.altitude > 0 ? '' : ' 🔒';
                 div.innerHTML = `${icon} ${obj.name} <span style="color:#8899aa">(${altText})</span>${visibleMark}`;
@@ -771,73 +1036,126 @@
             list.style.display = list.style.display === 'none' ? 'block' : 'none';
         });
 
-        // ========== 搜索功能 ==========
         function searchObject(name) {
-            // 在完整数据库中搜索
             const obj = fullObjectDB.find(o => o.name.includes(name));
             if (!obj) { alert('未找到该天体'); return; }
-            
-            if (obj.altitude === undefined) {
-                alert(`${obj.name} 位置尚未计算`);
-                return;
-            }
-            
-            if (obj.altitude < 0) {
-                alert(`${obj.name} 当前在地平线以下 (${obj.altitude.toFixed(1)}°)，无法定位`);
-                return;
-            }
-            
+            if (obj.altitude === undefined) { alert(`${obj.name} 位置尚未计算`); return; }
+            if (obj.altitude < 0) { alert(`${obj.name} 当前在地平线以下 (${obj.altitude.toFixed(1)}°)，无法定位`); return; }
             const pos = horizontalTo3D(obj.altitude, obj.azimuth, 500);
             controls.target.set(pos.x, pos.y, pos.z);
             controls.update();
         }
 
-        document.getElementById('search-btn').addEventListener('click', () => {
-            const name = document.getElementById('star-search').value;
-            if (name) searchObject(name);
-        });
-        
-        document.getElementById('star-search').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const name = document.getElementById('star-search').value;
-                if (name) searchObject(name);
-            }
-        });
+        document.getElementById('search-btn').addEventListener('click', () => { const name = document.getElementById('star-search').value; if (name) searchObject(name); });
+        document.getElementById('star-search').addEventListener('keypress', (e) => { if (e.key === 'Enter') { const name = document.getElementById('star-search').value; if (name) searchObject(name); } });
 
-        // ========== 时间控制 ==========
         document.getElementById('time-slider').addEventListener('input', (e) => {
             timeOffset = parseFloat(e.target.value);
-            document.getElementById('time-offset').textContent = 
-                (timeOffset >= 0 ? '+' : '') + timeOffset + 'h';
+            document.getElementById('time-offset').textContent = (timeOffset >= 0 ? '+' : '') + timeOffset + 'h';
             renderSky();
         });
-        
         document.getElementById('reset-time').addEventListener('click', () => {
-            timeOffset = 0;
-            document.getElementById('time-slider').value = 0;
-            document.getElementById('time-offset').textContent = '0h';
+            timeOffset = 0; document.getElementById('time-slider').value = 0;
+            document.getElementById('time-offset').textContent = '0h'; renderSky();
+        });
+
+        // 常用城市数据
+        const popularCities = [
+            { name: '北京', flag: '🇨🇳', lat: 39.9042, lon: 116.4074 },
+            { name: '上海', flag: '🇨🇳', lat: 31.2304, lon: 121.4737 },
+            { name: '广州', flag: '🇨🇳', lat: 23.1291, lon: 113.2644 },
+            { name: '深圳', flag: '🇨🇳', lat: 22.5431, lon: 114.0579 },
+            { name: '成都', flag: '🇨🇳', lat: 30.5728, lon: 104.0668 },
+            { name: '香港', flag: '🇭🇰', lat: 22.3193, lon: 114.1694 },
+            { name: '台北', flag: '🇹🇼', lat: 25.0330, lon: 121.5654 },
+            { name: '东京', flag: '🇯🇵', lat: 35.6762, lon: 139.6503 },
+            { name: '首尔', flag: '🇰🇷', lat: 37.5665, lon: 126.9780 },
+            { name: '新加坡', flag: '🇸🇬', lat: 1.3521, lon: 103.8198 },
+            { name: '曼谷', flag: '🇹🇭', lat: 13.7563, lon: 100.5018 },
+            { name: '悉尼', flag: '🇦🇺', lat: -33.8688, lon: 151.2093 },
+            { name: '伦敦', flag: '🇬🇧', lat: 51.5074, lon: -0.1278 },
+            { name: '巴黎', flag: '🇫🇷', lat: 48.8566, lon: 2.3522 },
+            { name: '纽约', flag: '🇺🇸', lat: 40.7128, lon: -74.0060 },
+            { name: '洛杉矶', flag: '🇺🇸', lat: 34.0522, lon: -118.2437 },
+            { name: '莫斯科', flag: '🇷🇺', lat: 55.7558, lon: 37.6173 },
+            { name: '开罗', flag: '🇪🇬', lat: 30.0444, lon: 31.2357 },
+            { name: '里约', flag: '🇧🇷', lat: -22.9068, lon: -43.1729 },
+            { name: '北极圈', flag: '🏔️', lat: 66.5, lon: 25.0 },
+        ];
+
+        // 生成城市按钮
+        const cityGrid = document.getElementById('city-grid');
+        popularCities.forEach(city => {
+            const btn = document.createElement('button');
+            btn.className = 'city-btn';
+            btn.innerHTML = `<span class="city-flag">${city.flag}</span><span class="city-name">${city.name}</span>`;
+            btn.addEventListener('click', () => {
+                userLat = city.lat; userLon = city.lon; userCity = city.name;
+                document.getElementById('location-status').textContent = `${city.name} (${city.lat.toFixed(4)}°, ${city.lon.toFixed(4)}°)`;
+                document.getElementById('location-status').style.color = '#66ff99';
+                document.getElementById('city-panel').style.display = 'none';
+                renderSky();
+            });
+            cityGrid.appendChild(btn);
+        });
+
+        // 切换地点按钮
+        document.getElementById('change-location-btn').addEventListener('click', () => {
+            const panel = document.getElementById('city-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // 手动输入展开/收起
+        document.getElementById('manual-toggle-btn').addEventListener('click', () => {
+            const section = document.getElementById('manual-section');
+            section.classList.toggle('show');
+            document.getElementById('manual-toggle-btn').textContent =
+                section.classList.contains('show') ? '📐 收起手动输入' : '📐 手动输入经纬度';
+        });
+
+        // 手动输入经纬度
+        document.getElementById('apply-location').addEventListener('click', () => {
+            const lat = parseFloat(document.getElementById('input-lat').value);
+            const lon = parseFloat(document.getElementById('input-lon').value);
+            if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                alert('请输入有效的经纬度！\n纬度: -90 ~ 90\n经度: -180 ~ 180'); return;
+            }
+            userLat = lat; userLon = lon;
+            const cityName = getLocationName(userLat, userLon);
+            userCity = cityName;
+            document.getElementById('location-status').textContent = `${cityName} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+            document.getElementById('location-status').style.color = '#66ff99';
+            document.getElementById('city-panel').style.display = 'none';
             renderSky();
         });
 
-        // ========== 鼠标交互 ==========
+        // 鼠标交互 - 详细信息卡片
         const tooltip = document.getElementById('tooltip');
-        
         function onMouseMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(
-                starMeshes.filter(m => m.userData.name)
-            );
-            
+            const intersects = raycaster.intersectObjects(starMeshes.filter(m => m.userData.name));
             if (intersects.length > 0) {
                 const obj = intersects[0].object.userData;
                 tooltip.style.display = 'block';
-                tooltip.style.left = event.clientX + 15 + 'px';
-                tooltip.style.top = event.clientY + 15 + 'px';
-                const icon = obj.type === '行星' ? '🪐' : 
-                            obj.type === '人造卫星' ? '🛰️' : '⭐';
-                tooltip.innerHTML = `${icon} <strong>${obj.name}</strong><br>类型: ${obj.type}<br>高度角: ${obj.altitude.toFixed(1)}°<br>方位角: ${obj.azimuth.toFixed(1)}°`;
+                tooltip.style.left = (event.clientX + 15) + 'px';
+                tooltip.style.top = (event.clientY + 15) + 'px';
+                const icon = obj.type === '行星' ? '🪐' : obj.type === '人造卫星' ? '🛰️' : '⭐';
+                
+                let extraHTML = '';
+                if (obj.type === '恒星' && starDetails[obj.name]) {
+                    const detail = starDetails[obj.name];
+                    extraHTML = `<div class="obj-info">📍 距离: ${detail.distance}</div><div class="obj-info">📖 ${detail.myth}</div><div class="obj-info">💡 ${detail.fact}</div>`;
+                } else if (obj.type === '行星') {
+                    const planets = { '太阳': '☀️ 太阳系中心恒星', '月亮': '🌙 地球唯一卫星', '水星': '🔴 离太阳最近的行星', '金星': '💛 最亮的行星，又名启明星', '火星': '🔴 红色行星，第四近太阳', '木星': '🟠 最大行星，气态巨行星', '土星': '🪐 有美丽环系统的巨行星' };
+                    extraHTML = `<div class="obj-info">${planets[obj.name] || ''}</div>`;
+                } else if (obj.type === '人造卫星') {
+                    const sats = { '国际空间站(ISS)': '🔧 人类在轨最大航天器，宇航员常驻', '天宫空间站': '🇨🇳 中国自主建造的空间站', '哈勃望远镜': '🔭 在轨30余年的著名空间望远镜', '星链-1': '🛰️ SpaceX星链卫星星座' };
+                    extraHTML = `<div class="obj-info">${sats[obj.name] || ''}</div>`;
+                }
+                
+                tooltip.innerHTML = `<div class="obj-name">${icon} ${obj.name}</div><div class="obj-type">${obj.type}${obj.constellation ? ' · ' + obj.constellation : ''}</div><div class="obj-info">📐 高度角: ${obj.altitude.toFixed(1)}° | 方位角: ${obj.azimuth.toFixed(1)}°</div>${extraHTML}`;
                 document.body.style.cursor = 'pointer';
             } else {
                 tooltip.style.display = 'none';
@@ -846,92 +1164,136 @@
         }
         window.addEventListener('mousemove', onMouseMove);
 
-        // ========== 地理位置 ==========
+        // 截图功能
+        document.getElementById('screenshot-btn').addEventListener('click', () => {
+            renderer.render(scene, camera);
+            const dataURL = renderer.domElement.toDataURL('image/png');
+            const link = document.createElement('a');
+            const time = new Date().toLocaleString('zh-CN').replace(/[/:]/g, '-');
+            link.download = `星空-${userCity || 'my-location'}-${time}.png`;
+            link.href = dataURL;
+            link.click();
+        });
+
+        // 地理位置获取（高精度模式）
         function getLocation() {
             return new Promise((resolve) => {
-                if (!navigator.geolocation) { 
-                    resolve({ lat: userLat, lon: userLon }); 
-                    return; 
-                }
+                if (!navigator.geolocation) { resolve({ lat: 39.9, lon: 116.4, name: '北京(浏览器不支持定位)' }); return; }
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => { 
-                        userLat = pos.coords.latitude; 
-                        userLon = pos.coords.longitude; 
-                        resolve({ lat: userLat, lon: userLon }); 
+                    (pos) => {
+                        userLat = pos.coords.latitude;
+                        userLon = pos.coords.longitude;
+                        const accuracy = pos.coords.accuracy ? ` ±${Math.round(pos.coords.accuracy)}m` : '';
+                        userCity = getLocationName(userLat, userLon);
+                        resolve({ lat: userLat, lon: userLon, name: `${userCity} (${userLat.toFixed(4)}°, ${userLon.toFixed(4)}°${accuracy})` });
                     },
-                    () => { resolve({ lat: userLat, lon: userLon }); },
-                    { timeout: 10000, enableHighAccuracy: false }
+                    (err) => {
+                        let reason = '未知原因';
+                        if (err.code === 1) reason = '用户拒绝了定位权限';
+                        else if (err.code === 2) reason = '无法获取位置信息';
+                        else if (err.code === 3) reason = '定位超时';
+                        console.warn('定位失败:', reason);
+                        userLat = 39.9; userLon = 116.4; userCity = '北京(定位失败，请手动输入)';
+                        resolve({ lat: 39.9, lon: 116.4, name: `北京(${reason}，请手动输入经纬度)` });
+                    },
+                    { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
                 );
             });
         }
 
-        // ========== 初始化 ==========
-        async function init() {
-            // 构建完整天体数据库
+        function init() {
             fullObjectDB = buildFullObjectDB();
-            
-            const startBtn = document.getElementById('start-btn');
-            startBtn.style.display = 'inline-block';
-            startBtn.addEventListener('click', async () => {
-                startBtn.disabled = true; 
-                startBtn.textContent = '正在获取位置...';
-                try { 
-                    await getLocation(); 
-                    document.getElementById('location-status').textContent = `位置已获取`; 
-                    document.getElementById('location-status').style.color = '#66ff99'; 
+            const loadingDiv = document.getElementById('loading');
+            const countdownEl = document.getElementById('countdown');
+            const progressFill = document.getElementById('progress-fill');
+            const loadingText = loadingDiv.querySelector('.loading-text');
+            const loadingSub = loadingDiv.querySelector('.loading-sub');
+
+            let hasEntered = false;
+            let currentStep = 0;
+
+            // 更新进度显示
+            function updateProgress(step, text, sub) {
+                currentStep = step;
+                countdownEl.textContent = Math.max(0, Math.round(15 - step / 100 * 15));
+                progressFill.style.width = step + '%';
+                if (text) loadingText.textContent = text;
+                if (sub) loadingSub.textContent = sub;
+            }
+
+            // 进入星空
+            function enterSky() {
+                if (hasEntered) return;
+                hasEntered = true;
+                updateProgress(100, '正在进入星空...', '');
+
+                renderSky();
+                loadingDiv.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingDiv.style.display = 'none';
+                    document.getElementById('ui-overlay').style.display = 'block';
+                    animate();
+                }, 800);
+            }
+
+            // 进度条动画 - 每100ms更新一次
+            const progressInterval = setInterval(() => {
+                if (hasEntered) {
+                    clearInterval(progressInterval);
+                    return;
                 }
-                catch (e) { 
-                    document.getElementById('location-status').textContent = '使用默认位置（北京）'; 
+                if (currentStep < 90) {
+                    currentStep += 2;
+                    updateProgress(currentStep);
                 }
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('ui-overlay').style.display = 'block';
-                renderSky(); 
-                animate();
+            }, 100);
+
+            // 定位
+            getLocation().then(loc => {
+                userLat = loc.lat; userLon = loc.lon; userCity = loc.name;
+                document.getElementById('location-status').textContent = loc.name;
+                document.getElementById('location-status').style.color = '#66ff99';
+                updateProgress(95, '定位成功！正在渲染星空...', '即将进入...');
+            }).catch(e => {
+                document.getElementById('location-status').textContent = '使用默认位置';
+                updateProgress(95, '定位失败，使用默认位置...', '即将进入...');
             });
+
+            // 最多5秒后强制进入
+            setTimeout(() => {
+                clearInterval(progressInterval);
+                enterSky();
+            }, 5000);
         }
 
-        // ========== 动画 ==========
         let time = 0;
         const originalColors = bgStars.geometry.attributes.color.array.slice();
-        
         function animate() {
-            requestAnimationFrame(animate); 
-            time += 0.001;
+            requestAnimationFrame(animate); time += 0.001;
+            // 更新天空着色器时间
+            if (skyShaderMaterial) {
+                skyShaderMaterial.uniforms.uTime.value = time;
+            }
             bgStars.rotation.y += 0.00003;
-            
             const colors = bgStars.geometry.attributes.color.array;
             for (let i = 0; i < 30; i++) {
                 const idx = Math.floor(Math.random() * 25000);
                 const i3 = idx * 3;
                 const twinkle = 0.7 + 0.3 * Math.sin(time * 2 + idx * 0.1);
-                colors[i3] = originalColors[i3] * twinkle;
-                colors[i3 + 1] = originalColors[i3 + 1] * twinkle;
-                colors[i3 + 2] = originalColors[i3 + 2] * twinkle;
+                colors[i3] = originalColors[i3] * twinkle; colors[i3 + 1] = originalColors[i3 + 1] * twinkle; colors[i3 + 2] = originalColors[i3 + 2] * twinkle;
             }
             bgStars.geometry.attributes.color.needsUpdate = true;
-            
-            if (Math.random() < 0.005 && meteors.length < 3) {
-                meteors.push(createMeteor());
-            }
-            
+            if (Math.random() < 0.005 && meteors.length < 3) meteors.push(createMeteor());
             for (let i = meteors.length - 1; i >= 0; i--) {
-                const m = meteors[i];
-                m.life -= m.speed;
-                m.mesh.material.opacity = m.life;
-                if (m.life <= 0) { 
-                    scene.remove(m.mesh); 
-                    meteors.splice(i, 1); 
-                }
+                const m = meteors[i]; m.life -= m.speed; m.mesh.material.opacity = m.life;
+                if (m.life <= 0) { scene.remove(m.mesh); meteors.splice(i, 1); }
             }
-            
-            controls.update(); 
-            renderer.render(scene, camera);
+            controls.update(); renderer.render(scene, camera);
         }
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix(); 
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
         init();
